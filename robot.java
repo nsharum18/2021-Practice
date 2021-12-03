@@ -314,12 +314,11 @@ public class Robot extends IterativeRobot {
 		//compressor on						
 		if (xBoxstart1.get()) {
 			Comp.setClosedLoopControl(true);
-			SmartDashboard.putString("Compressor Status", "ON");
 		}
 		//compressor off
 		else if (xBoxselect1.get()) {
 			Comp.setClosedLoopControl(false);
-			SmartDashboard.putString("Compressor Status", "OFF");
+		
 		}
 		
 		//Arms up
@@ -382,6 +381,13 @@ public class Robot extends IterativeRobot {
 			SmartDashboard.putString("Flysection Status", "NEUTRAL");
 		}
 
+		if (Comp.getClosedLoopControl() == false) {
+			SmartDashboard.putString("Compressor Status", "OFF");
+		}
+
+		if (Comp.getClosedLoopControl() == true) {
+			SmartDashboard.putString("Compressor Status", "ON");
+		}
 
 	}
 
