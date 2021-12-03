@@ -90,6 +90,7 @@ public class Robot extends IterativeRobot {
 	public void move(double distance, double speed) {
 		if (Currentstage == AutoStage.kStart) {  // When start
 			DemoDrive.arcadeDrive((speed * 0.01), -0.1); // Start moving forward
+			SmartDashboard.putString("Auto Stage", "kStart");
 			if (REncoder.getSelectedSensorPosition(0) >= distance) { // If motor has rotated more than ten times
 				Currentstage = AutoStage.kDriveForward; // Set stage to done
 			}
@@ -223,18 +224,21 @@ public class Robot extends IterativeRobot {
 		move(3800, -50);
 		if (Currentstage == AutoStage.kDriveForward) {
 			DemoDrive.arcadeDrive(0.5, -0.107);
+			SmartDashboard.putString("Auto Stage", "kDriveForward");
 			if (REncoder.getSelectedSensorPosition(0) <= -3800) { // If motor has rotated more than ten times
 				Currentstage = AutoStage.kDriveBack; // Set stage to done
 			}
 		}
 		if (Currentstage == AutoStage.kDriveBack) {
 			DemoDrive.arcadeDrive(-0.5, -0.107);
+			SmartDashboard.putString("Auto Stage", "kDriveBack");
 			if (REncoder.getSelectedSensorPosition(0) >= 0) { // If motor has rotated more than ten times
 				Currentstage = AutoStage.kDone; // Set stage to done
 			}
 		}
 		if (Currentstage == AutoStage.kDone) { // When stage is done
 			DemoDrive.arcadeDrive(0,0);
+			SmartDashboard.putString("Auto Stage", "kDone");
 		}
 	}
 
@@ -310,12 +314,12 @@ public class Robot extends IterativeRobot {
 		//compressor on						
 		if (xBoxstart1.get()) {
 			Comp.setClosedLoopControl(true);
-			System.out.println("Compressor turned on");
+			SmartDashboard.putString("Compressor Status", "ON");
 		}
 		//compressor off
 		else if (xBoxselect1.get()) {
 			Comp.setClosedLoopControl(false);
-			System.out.println("Compressor turned off");
+			SmartDashboard.putString("Compressor Status", "OFF");
 		}
 		
 		//Arms up
@@ -331,43 +335,41 @@ public class Robot extends IterativeRobot {
 		//Flysection down (Edited)
 		else if (xBox.getRawAxis(5) >= 0.1) {
 			Motor1.set(-0.7 * xBox.getRawAxis(5));
-			System.out.println("Flysection moved down");
+			SmartDashboard.putString("Flysection Status", "DOWN");
 		}
 		//Flysection up (Edited)
 		else if (xBox.getRawAxis(5) <= -0.1) {
 			Motor1.set(-0.7 * xBox.getRawAxis(5));
-			System.out.println("Flysection moved up");
+			SmartDashboard.putString("Flysection Status", "UP");
 		}
 		//Arms Close (Edited)
 		else if (xBox.getRawAxis(4) >= 0.3) {
 			double2.set(DoubleSolenoid.Value.kForward);
-			System.out.println("Arms closed");
+			SmartDashboard.putString("Arm Status", "CLOSED");
 		}
 		//Arms Open (Edited)
 		else if (xBox.getRawAxis(4) <= -0.3) {
 			double2.set(DoubleSolenoid.Value.kReverse);
-			System.out.println("Arms opened");
+			SmartDashboard.putString("Arm Status", "OPEN");
 		}
 		//Easy Mode (Added)
 		else if (xBoxa.get()) {
 			WMaxSpeed = 35;
-			System.out.println("Easy Mode On");
+			SmartDashboard.putString("Current Mode", "EASY");
 		}
 		else if (xBoxy.get()) {
 			WMaxSpeed = 100;
-			System.out.println("Easy Mode Off");
+			SmartDashboard.putString("Current Mode", "HARD");
 		}
 		//Rotation Offset Adjustment (Added)
 		else if (xBoxx.get()) {
 			WRotationOffset -= 0.05;
-			System.out.println("Rotation Offset: ");
-			System.out.println(WRotationOffset);
+			SmartDashboard.putNumber("Rotation Offset:", WRotationOffset);
 			Timer.delay(0.1);
 		}
 		else if (xBoxb.get()) {
 			WRotationOffset += 0.05;
-			System.out.println("Rotation Offset: ");
-			System.out.println(WRotationOffset);
+			SmartDashboard.putNumber("Rotation Offset:", WRotationOffset);
 			Timer.delay(0.1);
 		}
 		else {
@@ -377,6 +379,7 @@ public class Robot extends IterativeRobot {
 			double3.set(DoubleSolenoid.Value.kOff);
 			Motor1.set(0);
 			winch.set(0);
+			SmartDashboard.putString("Flysection Status", "NEUTRAL");
 		}
 
 
