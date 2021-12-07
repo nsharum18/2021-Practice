@@ -1,10 +1,12 @@
 package frc.robot;
+
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.PowerDistributionPanel;
 import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
@@ -17,9 +19,11 @@ import edu.wpi.first.wpilibj.networktables.NetworkTable;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.cscore.UsbCamera;
+import com.kauailabs.navx.frc.AHRS;
+
+
 
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
-
 
 
 /**
@@ -32,8 +36,12 @@ import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 @SuppressWarnings({ "deprecation" })
 public class Robot extends IterativeRobot {
 
-
-	
+	// Variables (Added by Wesley)
+	double WMaxSpeed = 70;
+	double WRotationOffset = 0.00;
+	double Wl = 0;
+	double Wr = 0;
+	double currentSpeed = 0.0;
 
 	String autoSelected;
 	Joystick stick = new Joystick(0);
@@ -53,6 +61,9 @@ public class Robot extends IterativeRobot {
 	SendableChooser<String> autoChooser = new SendableChooser<>();
 
 	int timeoutMs = 10;
+	AHRS navX;
+	PowerDistributionPanel examplePDP = new PowerDistributionPanel(0);
+
 
 
 	//encoders
@@ -89,11 +100,24 @@ public class Robot extends IterativeRobot {
 
 	public void move(double distance, double speed) {
 		if (Currentstage == AutoStage.kStart) {  // When start
+
 			DemoDrive.arcadeDrive((speed * 0.01), -0.1); // Start moving forward
-			SmartDashboard.putString("Auto Stage", "kStart");
+
+			SmartDashboard.putString("Auto Stage: ", "kStart");
+
 			if (REncoder.getSelectedSensorPosition(0) >= distance) { // If motor has rotated more than ten times
-				Currentstage = AutoStage.kDriveForward; // Set stage to done
+
+				Currentstage = AutoStage.kTurn; // Set stage to done
 			}
+		}
+	}
+
+	public void direction() {
+		if (navX.getYaw() > 0) {
+			DemoDrive.arcadeDrive(currentSpeed, -.15);
+		}
+		if (navX.getYaw() < -0) {
+			DemoDrive.arcadeDrive(currentSpeed, .15);
 		}
 	}
 
@@ -112,10 +136,15 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void robotInit() {
 
+		//navX
+		navX = new AHRS(SerialPort.Port.kUSB);
+		
 		//timer
 		timer = new Timer();
 
-
+		//PDP Dashboard
+		//SmartDashboard.putNumber("PDP Total Current: ", examplePDP.getTotalCurrent());
+		//SmartDashboard.putNumber("PDP Total Voltage: ", examplePDP.getVoltage());
 
 		//winch motor
 		winch = new Talon(1);
@@ -171,15 +200,6 @@ public class Robot extends IterativeRobot {
 
 	}
 
-	public void calibrateNavX()
-	{	
-		System.out.println("Calibrating NavX...");
-
-
-		
-	}
-
-
 	/**
 	 * This function is run once each time the robot enters autonomous mode
 	 */
@@ -201,6 +221,9 @@ public class Robot extends IterativeRobot {
 		table.putNumber( "camMode", 1);
 
 		Comp.setClosedLoopControl(true);
+
+		navX.reset();
+
 	}
 
 	/**
@@ -209,6 +232,11 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void autonomousPeriodic() {	
 
+		SmartDashboard.putNumber("Gyro", navX.getYaw());
+
+		//PDP Dashboard
+		SmartDashboard.putNumber("PDP Total Current: ", examplePDP.getTotalCurrent());
+		SmartDashboard.putNumber("PDP Total Voltage: ", examplePDP.getVoltage());
 
 		Left2.configOpenloopRamp(.4, timeoutMs);
 		Right1.configOpenloopRamp(.4, timeoutMs);
@@ -216,30 +244,33 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putNumber("Right Sensor position", REncoder.getSelectedSensorPosition(0));
 		SmartDashboard.putNumber("Left Sensor position", LEncoder.getSelectedSensorPosition(0));
 		
-		String gameData;
-		gameData = DriverStation.getInstance().getGameSpecificMessage();
-		
 /*--------------------------------------------------------------------------------------------------------------*/
 
-		move(3800, -50);
+		currentSpeed = -0.5;
+		move(4735, 50);
+		if(Currentstage == AutoStage.kStart || Currentstage == AutoStage.kDriveForward) { direction(); }
 		if (Currentstage == AutoStage.kDriveForward) {
+			currentSpeed = 0.5;
 			DemoDrive.arcadeDrive(0.5, -0.107);
-			SmartDashboard.putString("Auto Stage", "kDriveForward");
-			if (REncoder.getSelectedSensorPosition(0) <= -3800) { // If motor has rotated more than ten times
-				Currentstage = AutoStage.kDriveBack; // Set stage to done
-			}
-		}
-		if (Currentstage == AutoStage.kDriveBack) {
-			DemoDrive.arcadeDrive(-0.5, -0.107);
-			SmartDashboard.putString("Auto Stage", "kDriveBack");
-			if (REncoder.getSelectedSensorPosition(0) >= 0) { // If motor has rotated more than ten times
+			SmartDashboard.putString("Auto Stage: ", "kDriveForward");
+			if (REncoder.getSelectedSensorPosition(0) <= -10521) {
 				Currentstage = AutoStage.kDone; // Set stage to done
 			}
 		}
-		if (Currentstage == AutoStage.kDone) { // When stage is done
-			DemoDrive.arcadeDrive(0,0);
-			SmartDashboard.putString("Auto Stage", "kDone");
+		if (Currentstage == AutoStage.kTurn) {
+			currentSpeed = -0;
+			DemoDrive.arcadeDrive(-0, 0.7);
+			SmartDashboard.putString("Auto Stage: ", "kTurn");
+			if (navX.getYaw() >= 87.45) { // If motor has rotated more than ten times
+				Currentstage = AutoStage.kDriveForward;
+			}
 		}
+		if (Currentstage == AutoStage.kDone) { // When stage is done
+			currentSpeed = 0;
+			DemoDrive.arcadeDrive(0,0);
+			SmartDashboard.putString("Auto Stage: ", "kDone");
+		}
+		
 	}
 
 
@@ -254,6 +285,8 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void teleopInit() {
+
+		navX.reset();
 
 		Comp.setClosedLoopControl(true);
 
@@ -271,14 +304,15 @@ public class Robot extends IterativeRobot {
 	@Override
 	public void teleopPeriodic() {
 
+		SmartDashboard.putNumber("Gyro", navX.getYaw());
+
+		//PDP Dashboard
+		SmartDashboard.putNumber("PDP Total Current: ", examplePDP.getTotalCurrent());
+		SmartDashboard.putNumber("PDP Total Voltage: ", examplePDP.getVoltage());
+
+
 		SmartDashboard.putNumber("Right Sensor position", REncoder.getSelectedSensorPosition(0));
 		SmartDashboard.putNumber("Left Sensor position", LEncoder.getSelectedSensorPosition(0));
-
-		// Variables (Added by Wesley)
-		double WMaxSpeed = 70;
-		double WRotationOffset = 0.00;
-		double Wl = 0;
-		double Wr = 0;
 		
 
 		Left2.configOpenloopRamp(0, timeoutMs);
@@ -314,6 +348,7 @@ public class Robot extends IterativeRobot {
 		//compressor on						
 		if (xBoxstart1.get()) {
 			Comp.setClosedLoopControl(true);
+			SmartDashboard.putString("Compressor Status: ", "ON");
 		}
 		//compressor off
 		else if (xBoxselect1.get()) {
@@ -324,51 +359,55 @@ public class Robot extends IterativeRobot {
 		//Arms up
 		else if (xBoxStick.get()) {
 			double1.set(DoubleSolenoid.Value.kForward); // Up
+			SmartDashboard.putString("Arms Status: ", "UP");
+
 		}
 
 		// Arms down
 		else if (xBoxStick2.get()) {
 			double1.set(DoubleSolenoid.Value.kReverse); // Down
+			SmartDashboard.putString("Arms Status: ", "DOWN");
+
 		}
 		
 		//Flysection down (Edited)
 		else if (xBox.getRawAxis(5) >= 0.1) {
 			Motor1.set(-0.7 * xBox.getRawAxis(5));
-			SmartDashboard.putString("Flysection Status", "DOWN");
+			SmartDashboard.putString("Flysection Status: ", "DOWN");
 		}
 		//Flysection up (Edited)
 		else if (xBox.getRawAxis(5) <= -0.1) {
 			Motor1.set(-0.7 * xBox.getRawAxis(5));
-			SmartDashboard.putString("Flysection Status", "UP");
+			SmartDashboard.putString("Flysection Status: ", "UP");
 		}
 		//Arms Close (Edited)
 		else if (xBox.getRawAxis(4) >= 0.3) {
 			double2.set(DoubleSolenoid.Value.kForward);
-			SmartDashboard.putString("Arm Status", "CLOSED");
+			SmartDashboard.putString("Intake Status: ", "OPEN");
 		}
 		//Arms Open (Edited)
 		else if (xBox.getRawAxis(4) <= -0.3) {
 			double2.set(DoubleSolenoid.Value.kReverse);
-			SmartDashboard.putString("Arm Status", "OPEN");
+			SmartDashboard.putString("Intake Status: ", "CLOSED");
 		}
 		//Easy Mode (Added)
 		else if (xBoxa.get()) {
 			WMaxSpeed = 35;
-			SmartDashboard.putString("Current Mode", "EASY");
+			SmartDashboard.putString("Current Mode: ", "EASY");
 		}
 		else if (xBoxy.get()) {
 			WMaxSpeed = 100;
-			SmartDashboard.putString("Current Mode", "HARD");
+			SmartDashboard.putString("Current Mode: ", "HARD");
 		}
 		//Rotation Offset Adjustment (Added)
 		else if (xBoxx.get()) {
 			WRotationOffset -= 0.05;
-			SmartDashboard.putNumber("Rotation Offset:", WRotationOffset);
+			SmartDashboard.putNumber("Rotation Offset: ", WRotationOffset);
 			Timer.delay(0.1);
 		}
 		else if (xBoxb.get()) {
 			WRotationOffset += 0.05;
-			SmartDashboard.putNumber("Rotation Offset:", WRotationOffset);
+			SmartDashboard.putNumber("Rotation Offset: ", WRotationOffset);
 			Timer.delay(0.1);
 		}
 		else {
@@ -378,15 +417,17 @@ public class Robot extends IterativeRobot {
 			double3.set(DoubleSolenoid.Value.kOff);
 			Motor1.set(0);
 			winch.set(0);
-			SmartDashboard.putString("Flysection Status", "NEUTRAL");
+			SmartDashboard.putString("Flysection Status: ", "NEUTRAL");
+			SmartDashboard.putNumber("Rotation Offset: ", 0.0);
+
 		}
 
 		if (Comp.getClosedLoopControl() == false) {
-			SmartDashboard.putString("Compressor Status", "OFF");
+			SmartDashboard.putString("Compressor Status: ", "OFF");
 		}
 
 		if (Comp.getClosedLoopControl() == true) {
-			SmartDashboard.putString("Compressor Status", "ON");
+			SmartDashboard.putString("Compressor Status: ", "ON");
 		}
 
 	}
